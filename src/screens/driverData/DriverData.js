@@ -1,0 +1,115 @@
+import React, {useEffect, useState} from 'react';
+import {FlatList, SafeAreaView, TouchableOpacity, View} from 'react-native';
+import {RFValue} from 'react-native-responsive-fontsize';
+import CommonStyle from '../../CommonStyle';
+import DetailsComponent from '../../components/deatilsComponent/DetailsComponent';
+import CustomHeader from '../../components/header/CustomHeader';
+import NoData from '../../components/noData/NoData';
+import SpinnerLoader from '../../components/spinnerLoader/SpinnerLoader';
+import {COLORS} from '../../constant/Colors';
+import {DRIVER_DATA} from '../../constant/HeaderTitle';
+import {IMAGES} from '../../constant/Images';
+import {SCREENS} from '../../constant/ScreensName';
+import {
+  FAMILY_NAME,
+  NAME,
+  NATIONALITY,
+  NO_DATA_DESC,
+  NO_DATA_TITLE,
+} from '../../constant/TitleText';
+import {getDriverData} from '../../service/DriverDataService';
+import createStyles from './Styles';
+
+const DriverData = ({navigation}) => {
+  const [drivers, setDrivers] = useState([]);
+  const [selectedDriver, setSelectedDriver] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const commonStyles = CommonStyle();
+  const styles = createStyles();
+
+  useEffect(() => {
+    fetchDriverData();
+  }, []);
+
+  const fetchDriverData = async () => {
+    setIsLoading(true);
+    //get Data From API
+    const driverData = await getDriverData();
+    if (driverData?.status === 200) {
+      setDrivers(driverData?.data?.MRData?.DriverTable?.Drivers);
+    }
+    setIsLoading(false);
+  };
+
+  const handleDriverSelect = driver => {
+    setSelectedDriver(driver); // Set the selected driver
+    navigation.navigate(SCREENS.driverDetails, {
+      driverID: driver?.permanentNumber,
+    });
+  };
+
+  const renderItem = ({item, index}) => {
+    const isSelected = selectedDriver?.driverId === item.driverId;
+    return (
+      <TouchableOpacity
+        style={[
+          styles.dataContainer,
+          {
+            backgroundColor: isSelected ? COLORS.lightTheme : COLORS.white,
+            marginTop: index === 0 && RFValue(15),
+          },
+        ]}
+        onPress={() => handleDriverSelect(item)}
+        activeOpacity={0.7}>
+        <DetailsComponent title={NAME} data={item?.givenName} />
+        <DetailsComponent title={NATIONALITY} data={item?.nationality} />
+        <DetailsComponent title={FAMILY_NAME} data={item?.familyName} />
+      </TouchableOpacity>
+    );
+  };
+  return (
+    <View style={styles.container}>
+      <SafeAreaView style={styles.safeAreaView} />
+      <View style={styles.safeAreaView}>
+        <View style={{...commonStyles.header}}>
+          <CustomHeader
+            title={DRIVER_DATA}
+            titleTextStyle={styles.headerText}
+          />
+        </View>
+      </View>
+      {isLoading ? (
+        <View style={styles.loaderView}>
+          <SpinnerLoader
+            style={styles.loader}
+            size={'large'}
+            color={COLORS.theme}
+          />
+        </View>
+      ) : (
+        <View style={styles.container}>
+          {drivers.length > 0 ? (
+            <FlatList
+              data={drivers}
+              renderItem={renderItem}
+              style={styles.contentContainerStyle}
+              keyExtractor={item => item.driverId}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <NoData
+              image={IMAGES.noData}
+              title={NO_DATA_TITLE}
+              message={NO_DATA_DESC}
+              titleStyle={styles.noDataTitle}
+              messageStyle={styles.messageStyle}
+              containerStyle={styles.containerStyle}
+            />
+          )}
+        </View>
+      )}
+    </View>
+  );
+};
+
+export default DriverData;
